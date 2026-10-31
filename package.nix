@@ -26,6 +26,22 @@ appimageTools.wrapType2 {
       lttng-ust_2_12
     ];
 
+  # SCSKiller keeps its named-mutex locks in $XDG_RUNTIME_DIR/.dotnet and
+  # refuses any parent folder not owned by root or the user. Inside bwrap's
+  # user namespace root isn't mapped, so the host's /run shows up as owned by
+  # nobody. Mount the runtime dir at a top-level path instead, whose parent is
+  # bwrap's own root and is owned by the user.
+  extraPreBwrapCmds = ''
+    xdg_runtime_args=()
+    if [[ -d "''${XDG_RUNTIME_DIR:-}" ]]; then
+      xdg_runtime_args=(
+        --bind "$XDG_RUNTIME_DIR" /xdg-runtime
+        --setenv XDG_RUNTIME_DIR /xdg-runtime
+      )
+    fi
+  '';
+  extraBwrapArgs = [ ''"''${xdg_runtime_args[@]}"'' ];
+
   extraInstallCommands = ''
     install -Dm444 ${appimageContents}/SCSKiller.App.desktop \
       $out/share/applications/scskiller.desktop
